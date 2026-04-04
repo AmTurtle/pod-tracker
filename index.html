@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Insulin Pod Tracker</title>
+  <style>
+  body {
+    font-family: Arial;
+    background: #121212;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+
+    color: #ffffff;
+  }
+
+  .box {
+    background: #1e1e1e;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    text-align: center;
+  }
+
+  h2 {
+    margin-top: 0;
+  }
+
+  h3 {
+    margin: 10px 0;
+  }
+
+  button {
+    padding: 10px 20px;
+    font-size: 16px;
+    margin-top: 20px;
+    cursor: pointer;
+
+    background: #2e2e2e;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+  }
+
+  button:hover {
+    background: #3a3a3a;
+  }
+  .section {
+  margin-bottom: 25px;
+  .label {
+  font-size: 13px;
+  color: #9e9e9e;
+  letter-spacing: 1px;
+}
+
+.value {
+  font-size: 24px;
+  font-weight: bold;
+  margin-top: 5px;
+}
+
+.current {
+  color: #4fc3f7;
+}
+
+.next {
+  color: #81c784;
+}
+}
+</style>
+</head>
+<body>
+<button id="loginBtn">Sign in with Google</button>
+<br><br>
+<button id="changeBtn">I Changed My Pod</button>
+<div class="box">
+  <h2>Insulin Pod Tracker</h2>
+
+<div class="section">
+  <div class="label">CURRENT</div>
+  <div id="current" class="value current"></div>
+</div>
+
+<div class="section">
+  <div class="label">NEXT</div>
+  <div id="next" class="value next"></div>
+</div>
+
+  <button onclick="nextSpot()">I Changed My Pod</button>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+  // 🔑 PASTE YOUR CONFIG HERE
+   const firebaseConfig = {
+    apiKey: "AIzaSyDMd6zwD1WaXkoOI6NSzLCQ6xxdDlDp2Wg",
+    authDomain: "pod-tracker-f2096.firebaseapp.com",
+    databaseURL: "https://pod-tracker-f2096-default-rtdb.firebaseio.com",
+    projectId: "pod-tracker-f2096",
+    storageBucket: "pod-tracker-f2096.firebasestorage.app",
+    messagingSenderId: "1090944262591",
+    appId: "1:1090944262591:web:1d4d7148463950745d410a"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+
+  const spots = [
+    "Left - Inward",
+    "Right - Inward",
+    "Left - Outward",
+    "Right - Outward"
+  ];
+
+  let index = 0;
+
+  const currentEl = document.getElementById("current");
+  const nextEl = document.getElementById("next");
+
+  function updateDisplay() {
+    currentEl.innerText = spots[index];
+    nextEl.innerText = spots[(index + 1) % spots.length];
+  }
+
+  // 🔐 Sign in
+  document.getElementById("loginBtn").onclick = async () => {
+    await signInWithPopup(auth, provider);
+
+    const user = auth.currentUser;
+    const dbRef = ref(db, "users/" + user.uid + "/podIndex");
+
+    // Listen for changes (sync!)
+    onValue(dbRef, (snapshot) => {
+      if (snapshot.exists()) {
+        index = snapshot.val();
+      } else {
+        index = 0;
+      }
+      updateDisplay();
+    });
+
+    // Button click updates database
+    document.getElementById("changeBtn").onclick = () => {
+      index = (index + 1) % spots.length;
+      set(dbRef, index);
+    };
+  };
+</script>
+
+</body>
+</html>
