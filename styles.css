@@ -81,3 +81,44 @@ button {
 button:hover {
   background: #3a3a3a;
 }
+
+@media (max-width: 768px) {
+  .box {
+    min-width: 0;
+    width: 88vw;
+    padding: 32px 24px;
+    border-radius: 16px;
+  }
+
+  h2 {
+    font-size: 32px;
+    margin-bottom: 28px;
+  }
+
+  .label {
+    font-size: 16px;
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+  }
+
+  .value {
+    font-size: 32px;
+  }
+
+  button {
+    font-size: 20px;
+    padding: 14px 22px;
+    border-radius: 10px;
+  }
+
+  .user-bar {
+    font-size: 18px;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .topbar {
+    min-height: 56px;
+  }
+}
