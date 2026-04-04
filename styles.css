@@ -82,6 +82,13 @@ button:hover {
   background: #3a3a3a;
 }
 
+.user-pic {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 @media (max-width: 768px) {
   .box {
     min-width: 0;
