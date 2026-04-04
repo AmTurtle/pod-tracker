@@ -4,40 +4,79 @@
   <title>Insulin Pod Tracker</title>
   <style>
   body {
-    font-family: Arial;
+    font-family: Arial, sans-serif;
     background: #121212;
-
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    min-height: 100vh;
     margin: 0;
-
     color: #ffffff;
+  }
+
+  .page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+  }
+
+  .topbar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .user-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
 
   .box {
     background: #1e1e1e;
-    padding: 20px;
+    padding: 24px;
     border-radius: 12px;
     box-shadow: 0 0 20px rgba(0,0,0,0.5);
     text-align: center;
+    min-width: 320px;
   }
 
   h2 {
     margin-top: 0;
+    margin-bottom: 24px;
   }
 
-  h3 {
-    margin: 10px 0;
+  .section {
+    margin-bottom: 25px;
+  }
+
+  .label {
+    font-size: 13px;
+    color: #9e9e9e;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  .value {
+    font-size: 24px;
+    font-weight: bold;
+    margin-top: 5px;
+  }
+
+  .current {
+    color: #4fc3f7;
+  }
+
+  .next {
+    color: #81c784;
   }
 
   button {
     padding: 10px 20px;
     font-size: 16px;
-    margin-top: 20px;
     cursor: pointer;
-
     background: #2e2e2e;
     color: #ffffff;
     border: none;
@@ -47,57 +86,51 @@
   button:hover {
     background: #3a3a3a;
   }
-  .section {
-  margin-bottom: 25px;
-}
-
-.label {
-  font-size: 13px;
-  color: #9e9e9e;
-  letter-spacing: 1px;
-}
-
-.value {
-  font-size: 24px;
-  font-weight: bold;
-  margin-top: 5px;
-}
-
-.current {
-  color: #4fc3f7;
-}
-
-.next {
-  color: #81c784;
-}
 </style>
 </head>
+
 <body>
-<div class="box">
-  <h2>Insulin Pod Tracker</h2>
+  <div class="page">
+    <div class="topbar">
+      <button id="loginBtn">Sign in with Google</button>
 
-  <button id="loginBtn">Sign in with Google</button>
+      <div id="userBar" class="user-bar" style="display: none;">
+        <span id="userText">Logged in as</span>
+        <button id="logoutBtn">Sign Out</button>
+      </div>
+    </div>
 
-  <div class="section">
-    <div class="label">CURRENT</div>
-    <div id="current" class="value current"></div>
+    <div class="box">
+      <h2>Insulin Pod Tracker</h2>
+
+      <div class="section">
+        <div class="label">CURRENT</div>
+        <div id="current" class="value current"></div>
+      </div>
+
+      <div class="section">
+        <div class="label">NEXT</div>
+        <div id="next" class="value next"></div>
+      </div>
+
+      <button id="changeBtn">I Changed My Pod</button>
+    </div>
   </div>
-
-  <div class="section">
-    <div class="label">NEXT</div>
-    <div id="next" class="value next"></div>
-  </div>
-
-  <button id="changeBtn">I Changed My Pod</button>
-</div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-  import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import {
+    getAuth,
+    GoogleAuthProvider,
+    signInWithPopup,
+    signOut,
+    onAuthStateChanged,
+    setPersistence,
+    browserLocalPersistence
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-  // 🔑 PASTE YOUR CONFIG HERE
-   const firebaseConfig = {
+  const firebaseConfig = {
     apiKey: "AIzaSyDMd6zwD1WaXkoOI6NSzLCQ6xxdDlDp2Wg",
     authDomain: "pod-tracker-f2096.firebaseapp.com",
     databaseURL: "https://pod-tracker-f2096-default-rtdb.firebaseio.com",
@@ -120,38 +153,68 @@
   ];
 
   let index = 0;
+  let dbRef = null;
 
   const currentEl = document.getElementById("current");
   const nextEl = document.getElementById("next");
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const userBar = document.getElementById("userBar");
+  const userText = document.getElementById("userText");
+  const changeBtn = document.getElementById("changeBtn");
 
   function updateDisplay() {
     currentEl.innerText = spots[index];
     nextEl.innerText = spots[(index + 1) % spots.length];
   }
 
-  // 🔐 Sign in
-  document.getElementById("loginBtn").onclick = async () => {
-    await signInWithPopup(auth, provider);
+  updateDisplay();
 
-    const user = auth.currentUser;
-    const dbRef = ref(db, "users/" + user.uid + "/podIndex");
+  await setPersistence(auth, browserLocalPersistence);
 
-    // Listen for changes (sync!)
-    onValue(dbRef, (snapshot) => {
-      if (snapshot.exists()) {
-        index = snapshot.val();
-      } else {
-        index = 0;
-      }
-      updateDisplay();
-    });
-
-    // Button click updates database
-    document.getElementById("changeBtn").onclick = () => {
-      index = (index + 1) % spots.length;
-      set(dbRef, index);
-    };
+  loginBtn.onclick = async () => {
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Login failed:", error);
+    }
   };
+
+  logoutBtn.onclick = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      loginBtn.style.display = "none";
+      userBar.style.display = "flex";
+      userText.textContent = `Logged in as ${user.email}`;
+
+      dbRef = ref(db, "users/" + user.uid + "/podIndex");
+
+      onValue(dbRef, (snapshot) => {
+        index = snapshot.exists() ? snapshot.val() : 0;
+        updateDisplay();
+      });
+
+      changeBtn.disabled = false;
+      changeBtn.onclick = async () => {
+        if (!dbRef) return;
+        index = (index + 1) % spots.length;
+        await set(dbRef, index);
+      };
+    } else {
+      loginBtn.style.display = "block";
+      userBar.style.display = "none";
+      userText.textContent = "Logged in as";
+      dbRef = null;
+      changeBtn.disabled = true;
+    }
+  });
 </script>
 
 </body>
