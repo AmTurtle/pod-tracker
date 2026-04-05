@@ -10,7 +10,7 @@ import {
   browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-// 🔑 Your Firebase config
+// firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyDMd6zwD1WaXkoOI6NSzLCQ6xxdDlDp2Wg",
   authDomain: "pod-tracker-f2096.firebaseapp.com",
@@ -21,13 +21,13 @@ const firebaseConfig = {
   appId: "1:1090944262591:web:1d4d7148463950745d410a"
 };
 
-// 🔥 Initialize Firebase
+// initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// 📍 Rotation spots
+// rotation spots
 const spots = [
   "Left - Inward",
   "Right - Inward",
@@ -38,7 +38,7 @@ const spots = [
 let index = 0;
 let dbRef = null;
 
-// 🎯 Elements
+// elements
 const currentEl = document.getElementById("current");
 const nextEl = document.getElementById("next");
 const loginBtn = document.getElementById("loginBtn");
@@ -48,25 +48,31 @@ const userText = document.getElementById("userText");
 const userPic = document.getElementById("userPic");
 const changeBtn = document.getElementById("changeBtn");
 
-// ✂️ Shorten email
+// shorten email
 function shortenEmail(email) {
   const [name, domain] = email.split("@");
   if (name.length <= 5) return email;
   return name.slice(0, 5) + "...@" + domain;
 }
 
-// 🔄 Update UI
-function updateDisplay() {
+// update ui
+function updateDisplay(showPlaceholder = false) {
+  if (showPlaceholder) {
+    currentEl.innerText = "---";
+    nextEl.innerText = "---";
+    return;
+  }
+
   currentEl.innerText = spots[index];
   nextEl.innerText = spots[(index + 1) % spots.length];
 }
 
-updateDisplay();
+updateDisplay(true);
 
-// 🔒 Keep user logged in
+// keep user logged in
 await setPersistence(auth, browserLocalPersistence);
 
-// 🔐 Login
+// login
 loginBtn.onclick = async () => {
   try {
     await signInWithPopup(auth, provider);
@@ -75,7 +81,7 @@ loginBtn.onclick = async () => {
   }
 };
 
-// 🔓 Logout
+// logout
 logoutBtn.onclick = async () => {
   try {
     await signOut(auth);
@@ -84,26 +90,26 @@ logoutBtn.onclick = async () => {
   }
 };
 
-// 🔁 Auth state listener (auto login)
+// auth state listener (auto login)
 onAuthStateChanged(auth, (user) => {
   if (user) {
-    // ✅ UI changes
+    // ui changes
     loginBtn.style.display = "none";
     userBar.style.display = "flex";
 
     userText.textContent = shortenEmail(user.email);
     userPic.src = user.photoURL || "https://placehold.co/32";
 
-    // 🔗 Database reference
+    // database reference
     dbRef = ref(db, "users/" + user.uid + "/podIndex");
 
-    // 🔄 Sync data
+    // sync data
     onValue(dbRef, (snapshot) => {
       index = snapshot.exists() ? snapshot.val() : 0;
       updateDisplay();
     });
 
-    // 🔘 Button action
+    // button action
     changeBtn.disabled = false;
     changeBtn.onclick = async () => {
       if (!dbRef) return;
@@ -112,12 +118,13 @@ onAuthStateChanged(auth, (user) => {
     };
 
   } else {
-    // ❌ Not logged in
+    // not logged in
     loginBtn.style.display = "block";
     userBar.style.display = "none";
     userText.textContent = "";
     userPic.src = "";
     dbRef = null;
     changeBtn.disabled = true;
+    updateDisplay(true);
   }
 });
