@@ -78,6 +78,11 @@ loginBtn.onclick = async () => {
     await signInWithPopup(auth, provider);
   } catch (error) {
     console.error("Login failed:", error);
+    const errorDetails = [
+      error.code || "unknown-error",
+      error.message || "No error message returned."
+    ].join("\n");
+    alert(`Google sign-in failed:\n${errorDetails}`);
   }
 };
 
